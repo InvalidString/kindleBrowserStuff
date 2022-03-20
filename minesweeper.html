@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang ="de">
+    <head>
+        <meta charset="UTF-8">
+        <title>Mine Sweeper</title>
+    </head>
+
+    <body>
+	
+		<div style="text-align:center;">
+		<canvas id="boardCanvas" width="1000" height="1000" style="border:2px solid #000000;">
+		</canvas>
+		</div>
+		<canvas id="flagButtonCanvas" width="150" height="150" style="border:2px solid #000000;">
+		</canvas>
+		<canvas id="exploreButtonCanvas" width="150" height="150" style="border:2px solid #000000;">
+		</canvas>
+		
+		<script>
+			// Game Settings
+			var boardSize = 15;
+			var mineCount = 45;
+			
+			function relMouseCoords(event){
+				var totalOffsetX = 0;
+				var totalOffsetY = 0;
+				var canvasX = 0;
+				var canvasY = 0;
+				var currentElement = c;
+
+				do{
+					totalOffsetX += currentElement.offsetLeft - currentElement.scrollLeft;
+					totalOffsetY += currentElement.offsetTop - currentElement.scrollTop;
+				}
+				while(currentElement = currentElement.offsetParent)
+
+				canvasX = event.pageX - totalOffsetX;
+				canvasY = event.pageY - totalOffsetY;
+
+				return {x:canvasX, y:canvasY}
+			}
+		
+		
+			function generateBoard(size, mineCount, safePos){
+				// Init Array
+				var b = new Array(size);
+				for(var x = 0; x < size; x++){
+					b[x] = new Array(size);
+					for(var y = 0; y < size; y++){
+						b[x][y] = {isMine:false, isExplored:false, hasFlag:false};
+					}
+				}
+				// Place Mines
+				var minesLeftToPlace = mineCount;
+				while(minesLeftToPlace > 0){
+					var p = {x:Math.floor(Math.random()*size), y:Math.floor(Math.random()*size)};
+					var c = b[p.x][p.y];
+					
+					var d = Math.max( Math.abs(p.x-safePos.x), Math.abs(p.y-safePos.y));
+					
+					if(!c.isMine && d > 1){
+						c.isMine = true;
+						minesLeftToPlace--;
+					}
+				}
+				
+				
+				// Calculate Numbers
+				for(var x = 0; x < size; x++){
+					for(var y = 0; y < size; y++){
+						var mineNumber = 0;
+						for(var ox = x-1; ox<=x+1; ox++){
+							for(var oy = y-1; oy<=y+1; oy++){
+								if(ox == x && oy == y){continue;}
+								if(ox < 0 || oy < 0){continue;}
+								if(ox >= size || oy >= size){continue;}
+								
+								if(b[ox][oy].isMine){mineNumber++;}
+							}
+						}
+						b[x][y].number = mineNumber;
+					}
+				}
+				
+				return b;
+			}
+			
+			function recursiveExplore(p){
+				var c = board[p.x][p.y];
+			
+				if(!c.isExplored){
+					c.isExplored = true;
+					enptySpaceCount--;
+					if(c.number == 0){
+						for(var x = p.x-1; x <= p.x+1; x++){
+							for(var y = p.y-1; y <= p.y+1; y++){
+								if(x == p.x && y == p.y){continue;}
+								if(x < 0 || y < 0){continue;}
+								if(x >= boardSize || y >= boardSize){continue;}
+								
+								recursiveExplore({x:x, y:y});
+							}
+						}
+					}
+				}
+			}
+			
+			function winConditionCheck(){
+				if(enptySpaceCount <= 0){
+					drawBoard(ctx);
+					alert("You Win!");
+					c.onclick = function(){}
+				}
+			}
+		
+			function drawFlag(ctx){
+				ctx.fillRect(0.1, 0.1, 0.8, 0.4);
+				ctx.fillRect(0.1, 0.1, 0.02, 0.8);
+			}
+		
+			function drawCell(ctx, pos){
+				var cell = board[pos.x][pos.y];
+			
+				ctx.lineWidth = 0.05;
+			
+				ctx.fillStyle = "#000000";
+				ctx.strokeStyle = "#000000";
+				
+				ctx.strokeRect(0, 0, 1, 1);
+				
+				
+				// draw mines if visible
+				if(cell.isMine && minesVisible){
+					ctx.fillRect(.2,.2,.6,.6);
+					return;
+				}
+				
+				if(!cell.isExplored){
+					ctx.fillStyle = "#666666";
+					ctx.fillRect(0,0,1,1);
+					ctx.fillStyle = "#000000";
+					ctx.strokeRect(0, 0, 1, 1);
+					
+					if(cell.hasFlag){
+						drawFlag(ctx);
+					}
+					
+					return;
+				}
+				
+				
+				if(cell.number != "0"){
+					ctx.fillText(cell.number, 0.25, 0.85);
+				}
+			}
+		
+			function drawBoard(ctx){
+				ctx.setTransform(1, 0, 0, 1, 0, 0);
+				ctx.clearRect(0,0,c.width, c.height);
+				ctx.scale(1000, 1000);
+				
+				ctx.scale(1/boardSize, 1/boardSize);
+				
+				for(var x = 0; x < boardSize; x++){
+					for(var y = 0; y < boardSize; y++){
+						drawCell(ctx, {x:x, y:y});
+						ctx.translate(0,1);
+					}
+					ctx.translate(1,-boardSize);
+				}
+				
+			}
+			function drawButtons(flag, explore){
+				flag.fillStyle = "#000000";
+				flag.clearRect(0,0,1,1);
+				explore.clearRect(0,0,1,1);
+				
+				
+				explore.fillRect(.4, .2, .2, .6);
+				explore.fillRect(.2, .4, .6, .2);
+				
+				drawFlag(flag);
+				
+				var selected = null;
+				
+				if(tool == "explore"){
+					selected = explore;
+				}else if(tool == "flag"){
+					selected = flag;
+				}
+				if(selected != null){
+					selected.lineWidth = 0.12;
+					selected.strokeStyle = "#000000";
+					selected.strokeRect(0,0,1,1);
+					selected.lineWidth = 0.04;
+					selected.strokeStyle = "#FFFFFF";
+					selected.strokeRect(0,0,1,1);
+					
+					
+					selected.strokeStyle = "#000000";
+					selected.lineWidth = 0.1;
+				}
+			}
+		
+			// Game State Variables
+			var tool = "explore";
+			var enptySpaceCount = boardSize*boardSize - mineCount;
+			var board = generateBoard(boardSize, 0, {x:0, y:0}); // is regenerated on first move anyways
+			var firstMoveMade = false;
+			var minesVisible = false;
+		
+		
+			var c = document.getElementById("boardCanvas");
+			var ctx = c.getContext("2d");
+			var cFlagButton = document.getElementById("flagButtonCanvas");
+			var ctxFlagButton = cFlagButton.getContext("2d");
+			var cExploreButton = document.getElementById("exploreButtonCanvas");
+			var ctxExploreButton = cExploreButton.getContext("2d");
+			ctx.font = "1px Arial";
+			ctx.fillStyle = "#000000";
+			ctx.lineWidth = 0.1;
+			ctxFlagButton.lineWidth = 0.1;
+			ctxFlagButton.scale(cFlagButton.width, cFlagButton.height);
+			ctxExploreButton.lineWidth = 0.1;
+			ctxExploreButton.scale(cExploreButton.width, cExploreButton.height);
+		
+		
+			drawBoard(ctx);
+			drawButtons(ctxFlagButton, ctxExploreButton);
+				
+			c.onclick = function(event){
+				var coords = relMouseCoords(event);
+				coords.x *= 0.001;
+				coords.y *= 0.001;
+				
+				var clickedCellPos = {x:Math.floor(coords.x*boardSize), y:Math.floor(coords.y*boardSize)};
+				
+				
+				if(!firstMoveMade){
+					firstMoveMade = true;
+					board = generateBoard(boardSize, mineCount, clickedCellPos);
+				}
+				
+				var clickedCell = board[clickedCellPos.x][clickedCellPos.y];
+				
+				
+				if(tool == "flag"){
+					clickedCell.hasFlag = !clickedCell.hasFlag && !clickedCell.isExplored;
+				
+				}
+				
+				if(tool == "explore" && !clickedCell.hasFlag){
+					if(clickedCell.isMine){
+						minesVisible = true;
+						drawBoard(ctx);
+						c.onclick = function(){}
+						alert("boom!");
+						return;
+					}
+					
+					recursiveExplore(clickedCellPos);
+					winConditionCheck();
+				}
+				
+				
+				drawBoard(ctx);
+				
+				
+			}
+			cFlagButton.onclick = function(event){
+				if(!firstMoveMade) return;
+				tool = "flag";
+				drawButtons(ctxFlagButton, ctxExploreButton);
+			}
+			cExploreButton.onclick = function(event){
+				if(!firstMoveMade) return;
+				tool = "explore";
+				drawButtons(ctxFlagButton, ctxExploreButton);
+			}
+			
+		</script>
+	
+	
+    </body>
+
+</html>
