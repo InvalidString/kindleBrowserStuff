@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang ="de">
+	<style>
+	.plusButton{
+		font-size:80px;
+		width:120px;
+		height=100px;
+	}
+	.delButton{
+		font-size:40px;
+		width:400px;
+		height=200px;
+	}
+	.check{
+		border:3px solid #000000;
+		position: absolute;
+		top: 10px;
+		right: 20px;
+	}
+	.row{
+		position:relative;
+		padding:10px 0px;
+	}
+	</style>
+
+
+    <head>
+        <meta charset="UTF-8">
+        <title>Todo-List</title>
+    </head>
+
+    <body>
+		<h2 style="text-align:center;font-size:80px;">TODO</h2>
+		<div id="list" style="text-align:right;font-size:60px;">
+			<div class="row">
+				<input style="font-size:60px; width:100%;" value="-" id="row" onChange="">
+					<canvas id="check0" width="80" height="80" class="check" onclick="checkButton(this);"></canvas>
+				</input>
+			</div>
+		</div>
+		<div style="text-align:right; padding:20px;">
+			<button class="plusButton" onclick="deleteDoneButton();">X</button>
+			<button class="plusButton" onclick="plusButton();">+</button>
+		</div>
+	
+	
+    </body>
+	
+<script>
+
+function createElementFromHTML(htmlString) {
+  var div = document.createElement('div');
+  div.innerHTML = htmlString.trim();
+  
+  return div.firstChild;
+}
+
+var list = document.getElementById("list");
+
+var doneList = {};
+
+var rowHTML =
+'<div class="row">' +
+	'<input style="font-size:60px; width:100%;" value="-" id="row" onChange="">' +
+		'<canvas id="check0" width="80" height="80" class="check" onclick="checkButton(this);"></canvas>' +
+	'</input>' +
+'</div>';
+
+function plusButton(){
+	var newRow = createElementFromHTML(rowHTML);
+	newRow.children[1].id = "check" + Math.random();
+	list.appendChild(newRow);
+}
+
+function deleteDoneButton(){
+	var ids = Object.keys(doneList);
+	for(var i=0; i<ids.length; i++){
+		var id = ids[i];
+		var button = document.getElementById(id);
+		delete doneList[id];
+		list.removeChild(button.parentElement);
+	}
+}
+
+function checkButton(button){
+
+	{
+		var isDone = button.id in doneList;
+
+		if(isDone){
+			delete doneList[button.id];
+		}else{
+			doneList[button.id] = {};
+		}
+		isDone = !isDone;
+	}
+	
+	var ctx = button.getContext("2d");
+	ctx.setTransform(1, 0, 0, 1, 0, 0);
+	ctx.clearRect(0,0,button.width, button.height);
+	ctx.scale(button.width, button.height);
+	
+	if(isDone){
+		ctx.translate(0.5, 0.5);
+		ctx.rotate(Math.PI * 0.25);
+		ctx.fillRect(0,-.4,.2,.8);
+		ctx.fillRect(-.2,.2,.4,.2);
+	}
+}
+
+</script>
+
+</html>
