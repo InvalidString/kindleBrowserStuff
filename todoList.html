@@ -32,13 +32,10 @@
     <body>
 		<h2 style="text-align:center;font-size:80px;">TODO</h2>
 		<div id="list" style="text-align:right;font-size:60px;">
-			<div class="row">
-				<input style="font-size:60px; width:100%;" value="-" id="row" onChange="">
-					<canvas id="check0" width="80" height="80" class="check" onclick="checkButton(this);"></canvas>
-				</input>
-			</div>
+			
 		</div>
 		<div style="text-align:right; padding:20px;">
+			<button class="plusButton" onclick="save();">S</button>
 			<button class="plusButton" onclick="deleteDoneButton();">X</button>
 			<button class="plusButton" onclick="plusButton();">+</button>
 		</div>
@@ -46,7 +43,34 @@
 	
     </body>
 	
+	
 <script>
+// add Array.find method because it isn't there by default on kindles
+
+if(!("find" in Array.prototype)){
+	Array.prototype.find = function(predecate){
+		for(var i = 0; i < this.length; i++){
+			if(predecate(this[i])){
+				return this[i];
+			}
+		}
+	}
+}
+
+
+</script>
+
+<script>
+var rowHTML =
+'<div class="row">' +
+	'<input style="font-size:60px; width:100%;" value="-" id="row" onChange="onWrite(this)">' +
+		'<canvas id="check0" width="80" height="80" class="check" onclick="checkButton(this);"></canvas>' +
+	'</input>' +
+'</div>';
+
+
+
+var list = document.getElementById("list");
 
 function createElementFromHTML(htmlString) {
   var div = document.createElement('div');
@@ -54,59 +78,93 @@ function createElementFromHTML(htmlString) {
   
   return div.firstChild;
 }
-
-var list = document.getElementById("list");
-
-var doneList = {};
-
-var rowHTML =
-'<div class="row">' +
-	'<input style="font-size:60px; width:100%;" value="-" id="row" onChange="">' +
-		'<canvas id="check0" width="80" height="80" class="check" onclick="checkButton(this);"></canvas>' +
-	'</input>' +
-'</div>';
-
-function plusButton(){
+function addVisualListItem(id, text, done){
 	var newRow = createElementFromHTML(rowHTML);
-	newRow.children[1].id = "check" + Math.random();
+	newRow.children[1].id = id;
+	newRow.children[0].id = id;
+	newRow.children[0].value = text;
+	redrawCheck(newRow.children[1], done);
 	list.appendChild(newRow);
+}
+function plusButton(){
+	var id = Math.random();
+	addVisualListItem(id, "-", false);
+	state.list.push({id:id, text:"-", done:false});
+}
+
+
+
+
+
+var state = {
+	list:new Array()
+};
+// Get State
+{
+	var stateText = decodeURI(window.location.search.substring(1));
+	if(stateText == ""){
+		//alert("no state loaded");
+		plusButton();
+	}else{
+		//console.log("state loaded:" + stateText);
+		var state = JSON.parse(stateText);
+		// load state
+		for(var i = 0; i<state.list.length; i++){
+			var elem = state.list[i];
+			addVisualListItem(elem.id, elem.text, elem.done);
+		}
+	}
+}
+
+
+
+function onWrite(textField){
+	var id = textField.id;
+	var rowState = state.list.find(function(item){ return item.id==id;});
+	rowState.text = textField.value;
 }
 
 function deleteDoneButton(){
-	var ids = Object.keys(doneList);
-	for(var i=0; i<ids.length; i++){
-		var id = ids[i];
-		var button = document.getElementById(id);
-		delete doneList[id];
-		list.removeChild(button.parentElement);
-	}
-}
-
-function checkButton(button){
-
-	{
-		var isDone = button.id in doneList;
-
-		if(isDone){
-			delete doneList[button.id];
-		}else{
-			doneList[button.id] = {};
+	for(var i=0; i<state.list.length; i++){
+		var id = state.list[i].id;
+		if(state.list[i].done){
+			var button = document.getElementById(id);
+			list.removeChild(button.parentElement);
 		}
-		isDone = !isDone;
 	}
-	
+	state.list = state.list.filter(function(item){ return !item.done});
+}
+function save(){
+	var url = document.location.href.split("?")[0];	
+	document.location.href = url + "?" + JSON.stringify(state);
+}
+function redrawCheck(button, check){
 	var ctx = button.getContext("2d");
 	ctx.setTransform(1, 0, 0, 1, 0, 0);
 	ctx.clearRect(0,0,button.width, button.height);
 	ctx.scale(button.width, button.height);
 	
-	if(isDone){
+	if(check){
 		ctx.translate(0.5, 0.5);
 		ctx.rotate(Math.PI * 0.25);
 		ctx.fillRect(0,-.4,.2,.8);
 		ctx.fillRect(-.2,.2,.4,.2);
 	}
 }
+
+function checkButton(button){
+
+
+	var id = button.id;
+
+	var buttonState = state.list.find(function(item){ return item.id==id;});
+	
+	buttonState.done = !buttonState.done;
+	
+	redrawCheck(button, buttonState.done);
+	
+}
+
 
 </script>
 
